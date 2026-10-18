@@ -1,0 +1,180 @@
+c<mujoco model="quadruped_v2">
+  <!--
+    教学用四足机器人（12 自由度）
+    ============================================================
+    结构：躯干(浮基) + 4 条腿
+    每条腿 3 个关节：hip(外摆) + thigh(大腿俯仰) + knee(小腿俯仰)
+    每条腿末端一个球足，带 touch 传感器
+
+    坐标约定：x 前，y 左，z 上；所有关节绕 +y 为正则"向前摆"
+    站立位姿：thigh=0.5 rad, knee=-1.0 rad，脚正好落在 z=0 地面
+  -->
+  <compiler angle="degree" autolimits="true"/>
+
+  <!-- timestep 2ms，隐式积分，四足接触多时更稳 -->
+  <option timestep="0.002" integrator="implicitfast" cone="elliptic" impratio="10" iterations="50"/>
+
+  <visual>
+    <global offwidth="1280" offheight="720" azimuth="135" elevation="-20"/>
+  </visual>
+
+  <statistic center="0 0 0.3" extent="1.2"/>
+
+  <default>
+    <!-- 关节默认：少量阻尼、转子惯量、摩擦损耗，可明显减少抖振 -->
+    <joint damping="0.2" armature="0.01" frictionloss="0.02"/>
+    <!-- 几何默认：只和地板碰撞（contype=2, conaffinity=1），避免自碰撞抖动 -->
+    <geom rgba="0.45 0.55 0.65 1" friction="1.0 0.02 0.001" contype="2" conaffinity="1"/>
+    <site rgba="0.9 0.3 0.3 0.6" size="0.012"/>
+
+    <default class="torso">
+      <geom type="box" size="0.22 0.10 0.045" mass="6.0" rgba="0.33 0.40 0.48 1"/>
+    </default>
+    <default class="hip">
+      <geom type="sphere" size="0.032" mass="0.12" rgba="0.24 0.29 0.35 1"/>
+    </default>
+    <default class="thigh">
+      <geom type="capsule" fromto="0 0 0  0 0 -0.15" size="0.020" mass="0.70"
+            rgba="0.50 0.58 0.66 1"/>
+    </default>
+    <default class="shin">
+      <geom type="capsule" fromto="0 0 0  0 0 -0.15" size="0.015" mass="0.40"
+            rgba="0.62 0.69 0.76 1"/>
+    </default>
+    <default class="foot">
+      <geom type="sphere" size="0.022" mass="0.06" friction="1.2 0.02 0.001"
+            rgba="0.90 0.50 0.20 1"/>
+    </default>
+
+    <!-- 位置执行器 = 内置 PD 控制器：kp 是刚度，kv 是阻尼 -->
+    <default class="act_hip">
+      <position kp="60" kv="2.0" forcerange="-25 25"/>
+    </default>
+    <default class="act_leg">
+      <position kp="100" kv="2.5" forcerange="-50 50"/>
+    </default>
+  </default>
+
+  <worldbody>
+    <light pos="0 0 3" dir="0 0 -1" diffuse="0.9 0.9 0.9" castshadow="false"/>
+    <geom name="floor" type="plane" size="6 6 0.1" rgba="0.22 0.24 0.27 1"
+          friction="1.0 0.02 0.001" contype="1" conaffinity="1"/>
+
+    <camera name="track" pos="1.6 -1.6 0.9" xyaxes="0.7 0.7 0 -0.3 0.3 0.9" mode="trackcom"/>
+    <camera name="side"  pos="0 -2.0 0.45" xyaxes="1 0 0 0 0 1" mode="trackcom"/>
+    <camera name="front" pos="2.0 0 0.45" xyaxes="0 1 0 0 0 1" mode="trackcom"/>
+
+    <!-- 躯干：freejoint 提供 6 个自由度（3 平移 + 3 旋转） -->
+    <body name="root" pos="0 0 0.2853">
+      <freejoint name="root"/>
+      <geom class="torso"/>
+      <site name="imu" pos="0 0 0.02" size="0.02" rgba="0.9 0.9 0.2 0.8"/>
+
+      <!-- ================= 左前腿 FL ================= -->
+      <body name="FL_hip_body" pos="0.18 0.085 0">
+        <joint name="FL_hip_j" axis="1 0 0" range="-25 25"/>
+        <geom class="hip"/>
+        <body name="FL_thigh_body" pos="0 0 0">
+          <joint name="FL_thigh_j" axis="0 1 0" range="-45 135"/>
+          <geom class="thigh"/>
+          <body name="FL_shin_body" pos="0 0 -0.15">
+            <joint name="FL_knee_j" axis="0 1 0" range="-110 -5"/>
+            <geom class="shin"/>
+            <geom name="FL_foot" class="foot" pos="0 0 -0.15"/>
+            <site name="FL_foot_site" pos="0 0 -0.15"/>
+            <site name="FL_touch_site" pos="0 0 -0.172" size="0.004" rgba="0.9 0.3 0.3 0"/>
+          </body>
+        </body>
+      </body>
+
+      <!-- ================= 右前腿 FR ================= -->
+      <body name="FR_hip_body" pos="0.18 -0.085 0">
+        <joint name="FR_hip_j" axis="1 0 0" range="-25 25"/>
+        <geom class="hip"/>
+        <body name="FR_thigh_body" pos="0 0 0">
+          <joint name="FR_thigh_j" axis="0 1 0" range="-45 135"/>
+          <geom class="thigh"/>
+          <body name="FR_shin_body" pos="0 0 -0.15">
+            <joint name="FR_knee_j" axis="0 1 0" range="-110 -5"/>
+            <geom class="shin"/>
+            <geom name="FR_foot" class="foot" pos="0 0 -0.15"/>
+            <site name="FR_foot_site" pos="0 0 -0.15"/>
+            <site name="FR_touch_site" pos="0 0 -0.172" size="0.004" rgba="0.9 0.3 0.3 0"/>
+          </body>
+        </body>
+      </body>
+
+      <!-- ================= 左后腿 RL ================= -->
+      <body name="RL_hip_body" pos="-0.18 0.085 0">
+        <joint name="RL_hip_j" axis="1 0 0" range="-25 25"/>
+        <geom class="hip"/>
+        <body name="RL_thigh_body" pos="0 0 0">
+          <joint name="RL_thigh_j" axis="0 1 0" range="-45 135"/>
+          <geom class="thigh"/>
+          <body name="RL_shin_body" pos="0 0 -0.15">
+            <joint name="RL_knee_j" axis="0 1 0" range="-110 -5"/>
+            <geom class="shin"/>
+            <geom name="RL_foot" class="foot" pos="0 0 -0.15"/>
+            <site name="RL_foot_site" pos="0 0 -0.15"/>
+            <site name="RL_touch_site" pos="0 0 -0.172" size="0.004" rgba="0.9 0.3 0.3 0"/>
+          </body>
+        </body>
+      </body>
+
+      <!-- ================= 右后腿 RR ================= -->
+      <body name="RR_hip_body" pos="-0.18 -0.085 0">
+        <joint name="RR_hip_j" axis="1 0 0" range="-25 25"/>
+        <geom class="hip"/>
+        <body name="RR_thigh_body" pos="0 0 0">
+          <joint name="RR_thigh_j" axis="0 1 0" range="-45 135"/>
+          <geom class="thigh"/>
+          <body name="RR_shin_body" pos="0 0 -0.15">
+            <joint name="RR_knee_j" axis="0 1 0" range="-110 -5"/>
+            <geom class="shin"/>
+            <geom name="RR_foot" class="foot" pos="0 0 -0.15"/>
+            <site name="RR_foot_site" pos="0 0 -0.15"/>
+            <site name="RR_touch_site" pos="0 0 -0.172" size="0.004" rgba="0.9 0.3 0.3 0"/>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <!-- ============ 12 个位置执行器（ctrl = 目标关节角，单位弧度） ============ -->
+  <actuator>
+    <position class="act_hip" name="FL_hip_a"   joint="FL_hip_j"/>
+    <position class="act_leg" name="FL_thigh_a" joint="FL_thigh_j"/>
+    <position class="act_leg" name="FL_knee_a"  joint="FL_knee_j"/>
+    <position class="act_hip" name="FR_hip_a"   joint="FR_hip_j"/>
+    <position class="act_leg" name="FR_thigh_a" joint="FR_thigh_j"/>
+    <position class="act_leg" name="FR_knee_a"  joint="FR_knee_j"/>
+    <position class="act_hip" name="RL_hip_a"   joint="RL_hip_j"/>
+    <position class="act_leg" name="RL_thigh_a" joint="RL_thigh_j"/>
+    <position class="act_leg" name="RL_knee_a"  joint="RL_knee_j"/>
+    <position class="act_hip" name="RR_hip_a"   joint="RR_hip_j"/>
+    <position class="act_leg" name="RR_thigh_a" joint="RR_thigh_j"/>
+    <position class="act_leg" name="RR_knee_a"  joint="RR_knee_j"/>
+  </actuator>
+
+  <!-- ============ 传感器：相当于真机上的 IMU + 编码器 + 足底开关 ============ -->
+  <sensor>
+    <framepos     name="root_pos"    objtype="body" objname="root"/>
+    <framequat    name="root_quat"   objtype="body" objname="root"/>
+    <framelinvel  name="root_linvel" objtype="body" objname="root"/>
+    <frameangvel  name="root_angvel" objtype="body" objname="root"/>
+    <gyro         name="imu_gyro"    site="imu"/>
+    <accelerometer name="imu_acc"    site="imu"/>
+    <touch name="FL_touch" site="FL_touch_site"/>
+    <touch name="FR_touch" site="FR_touch_site"/>
+    <touch name="RL_touch" site="RL_touch_site"/>
+    <touch name="RR_touch" site="RR_touch_site"/>
+  </sensor>
+
+  <!-- ============ 站立 keyframe：所有脚本都从这里开始 ============ -->
+  <keyframe>
+    <key name="stand"
+         qpos="0 0 0.2853 1 0 0 0
+               0 0.5 -1.0   0 0.5 -1.0   0 0.5 -1.0   0 0.5 -1.0"
+         ctrl="0 0.5 -1.0   0 0.5 -1.0   0 0.5 -1.0   0 0.5 -1.0"/>
+  </keyframe>
+</mujoco>

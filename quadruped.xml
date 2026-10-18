@@ -1,0 +1,93 @@
+<mujoco model="quadruped">
+  <!-- 一个最小的四足机器人：躯干 + 4 条腿，每条腿 2 个关节（大腿 pitch + 小腿 pitch）共 8 个执行器 -->
+  <compiler angle="degree" autolimits="true"/>
+
+  <!-- timestep 小一点 + implicitfast 积分器，四足接触多、更稳 -->
+  <option timestep="0.002" integrator="implicitfast" iterations="50"/>
+
+  <default>
+    <!-- 关节默认：阻尼 + 转动惯量补偿(friction loss)，能显著减少抖振 -->
+    <joint damping="0.5" armature="0.01" frictionloss="0.05"/>
+    <!-- 几何默认：摩擦、颜色、密度（1000 = 水的密度，MuJoCo 默认） -->
+    <geom rgba=".45 .55 .65 1" friction="1.0 0.02 0.001" density="1000"/>
+    <!-- 位置执行器默认参数（PD 中的 P 和 D） -->
+    <position kp="40" kv="1.5" forcerange="-10 10"/>
+  </default>
+
+  <worldbody>
+    <light pos="0 0 3" dir="0 0 -1" diffuse="1 1 1"/>
+    <geom name="floor" type="plane" size="6 6 0.1" rgba=".22 .24 .27 1" friction="1.0 0.02 0.001"/>
+    <camera name="track" pos="1.6 -1.6 0.9" xyaxes="0.7 0.7 0 -0.3 0.3 0.9" mode="trackcom"/>
+
+    <!-- 浮基：free joint 让躯干有 6 个自由度（3 平移 + 3 旋转）。这是所有四足的关键 -->
+    <body name="root" pos="0 0 0.28">
+      <freejoint name="root"/>
+      <site name="root_gyro" pos="0 0 0" size="0.01"/>
+      <geom name="torso" type="box" size="0.20 0.09 0.04" mass="3"/>
+
+      <!-- ============ 左前腿 FL ============ -->
+      <body name="FL_thigh" pos="0.20 0.09 0">
+        <joint name="FL_thigh_j" type="hinge" axis="0 1 0" range="-60 60"/>
+        <geom type="capsule" fromto="0 0 0  0.07 0 -0.15" size="0.018"/>
+        <body name="FL_shin" pos="0.07 0 -0.15">
+          <joint name="FL_knee_j" type="hinge" axis="0 1 0" range="-80 80"/>
+          <geom type="capsule" fromto="0 0 0  -0.09 0 -0.11" size="0.014"/>
+          <geom name="FL_foot" type="sphere" pos="-0.09 0 -0.11" size="0.022" rgba=".9 .5 .2 1"/>
+        </body>
+      </body>
+
+      <!-- ============ 右前腿 FR ============ -->
+      <body name="FR_thigh" pos="0.20 -0.09 0">
+        <joint name="FR_thigh_j" type="hinge" axis="0 1 0" range="-60 60"/>
+        <geom type="capsule" fromto="0 0 0  0.07 0 -0.15" size="0.018"/>
+        <body name="FR_shin" pos="0.07 0 -0.15">
+          <joint name="FR_knee_j" type="hinge" axis="0 1 0" range="-80 80"/>
+          <geom type="capsule" fromto="0 0 0  -0.09 0 -0.11" size="0.014"/>
+          <geom name="FR_foot" type="sphere" pos="-0.09 0 -0.11" size="0.022" rgba=".9 .5 .2 1"/>
+        </body>
+      </body>
+
+      <!-- ============ 左后腿 RL ============ -->
+      <body name="RL_thigh" pos="-0.20 0.09 0">
+        <joint name="RL_thigh_j" type="hinge" axis="0 1 0" range="-60 60"/>
+        <geom type="capsule" fromto="0 0 0  0.07 0 -0.15" size="0.018"/>
+        <body name="RL_shin" pos="0.07 0 -0.15">
+          <joint name="RL_knee_j" type="hinge" axis="0 1 0" range="-80 80"/>
+          <geom type="capsule" fromto="0 0 0  -0.09 0 -0.11" size="0.014"/>
+          <geom name="RL_foot" type="sphere" pos="-0.09 0 -0.11" size="0.022" rgba=".9 .5 .2 1"/>
+        </body>
+      </body>
+
+      <!-- ============ 右后腿 RR ============ -->
+      <body name="RR_thigh" pos="-0.20 -0.09 0">
+        <joint name="RR_thigh_j" type="hinge" axis="0 1 0" range="-60 60"/>
+        <geom type="capsule" fromto="0 0 0  0.07 0 -0.15" size="0.018"/>
+        <body name="RR_shin" pos="0.07 0 -0.15">
+          <joint name="RR_knee_j" type="hinge" axis="0 1 0" range="-80 80"/>
+          <geom type="capsule" fromto="0 0 0  -0.09 0 -0.11" size="0.014"/>
+          <geom name="RR_foot" type="sphere" pos="-0.09 0 -0.11" size="0.022" rgba=".9 .5 .2 1"/>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <!-- 8 个位置执行器：ctrl 是「目标关节角度」，单位是【弧度】（MuJoCo 内部一律弧度） -->
+  <actuator>
+    <position name="FL_thigh_a" joint="FL_thigh_j"/>
+    <position name="FL_knee_a"  joint="FL_knee_j"/>
+    <position name="FR_thigh_a" joint="FR_thigh_j"/>
+    <position name="FR_knee_a"  joint="FR_knee_j"/>
+    <position name="RL_thigh_a" joint="RL_thigh_j"/>
+    <position name="RL_knee_a"  joint="RL_knee_j"/>
+    <position name="RR_thigh_a" joint="RR_thigh_j"/>
+    <position name="RR_knee_a"  joint="RR_knee_j"/>
+  </actuator>
+
+  <sensor>
+    <jointpos joint="FL_thigh_j"/>
+    <jointpos joint="FL_knee_j"/>
+    <framepos objtype="body" objname="root"/>       <!-- 躯干世界坐标 (x,y,z) -->
+    <framequat objtype="body" objname="root"/>      <!-- 躯干姿态四元数 (w,x,y,z) -->
+    <gyro site="root_gyro"/>                        <!-- 躯干角速度 -->
+  </sensor>
+</mujoco>
