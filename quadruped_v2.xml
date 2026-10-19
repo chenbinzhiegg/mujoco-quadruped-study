@@ -27,8 +27,9 @@ c<mujoco model="quadruped_v2">
     <geom rgba="0.45 0.55 0.65 1" friction="1.0 0.02 0.001" contype="2" conaffinity="1"/>
     <site rgba="0.9 0.3 0.3 0.6" size="0.012"/>
 
+    <!--  默认类定义 ，可复用的参数设置 -->
     <default class="torso">
-      <geom type="box" size="0.22 0.10 0.045" mass="6.0" rgba="0.33 0.40 0.48 1"/>
+      <geom type="box" size="0.22 0.10 0.045" mass="1.0" rgba="0.33 0.40 0.48 1"/>
     </default>
     <default class="hip">
       <geom type="sphere" size="0.032" mass="0.12" rgba="0.24 0.29 0.35 1"/>
